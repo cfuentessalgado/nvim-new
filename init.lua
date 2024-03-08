@@ -35,6 +35,10 @@ require('lazy').setup({
       vim.cmd("colorscheme catppuccin-frappe")
     end
   },
+  {
+    "laytan/cloak.nvim",
+    opts = {},
+  },
   require 'plugins.gitsigns',
   require 'plugins.nvim-tree',
   require 'plugins.treesitter',
