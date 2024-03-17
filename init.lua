@@ -39,6 +39,7 @@ require('lazy').setup({
     "laytan/cloak.nvim",
     opts = {},
   },
+  require 'plugins.neogit',
   require 'plugins.gitsigns',
   require 'plugins.nvim-tree',
   require 'plugins.treesitter',
