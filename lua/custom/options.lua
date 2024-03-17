@@ -52,3 +52,4 @@ vim.opt.isfname:append("@-@")
 for k, val in pairs(options) do
     vim.opt[k] = val
 end
+vim.filetype.add({ extension = { templ = "templ" } })
