@@ -31,8 +31,14 @@ require('lazy').setup({
     "catppuccin/nvim",
     name = "catppuccin",
     priority = 1000,
+  },
+  {
+    "folke/tokyonight.nvim",
+    lazy = false,
+    priority = 1000,
+    opts = {},
     config = function()
-      vim.cmd("colorscheme catppuccin-mocha")
+      vim.cmd("colorscheme tokyonight")
     end
   },
   {
@@ -49,6 +55,7 @@ require('lazy').setup({
   require 'plugins.telescope',
   require 'plugins.lsp',
   require 'plugins.autocomplete',
+  require 'plugins.trouble',
 }, {
   ui = {
     -- If you have a Nerd Font, set icons to an empty table which will use the
