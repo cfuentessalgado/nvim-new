@@ -5,7 +5,7 @@ return {
         require("chatgpt").setup({
             api_key_cmd = "pass show personal/openai/nvim-api",
             openai_params = {
-                model = "gpt-3.5-turbo"
+                model = "gpt-4-0125-preview",
             },
         })
         vim.keymap.set({ 'n' }, '<C-g>', '<cmd>ChatGPT<cr>', { desc = "Open Chat[G]PT" })
