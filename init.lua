@@ -56,6 +56,7 @@ require('lazy').setup({
   require 'plugins.lsp',
   require 'plugins.autocomplete',
   require 'plugins.trouble',
+  require 'plugins.undotree',
 }, {
   ui = {
     -- If you have a Nerd Font, set icons to an empty table which will use the
