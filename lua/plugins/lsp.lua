@@ -161,7 +161,7 @@ return { -- LSP Configuration & Plugins
 
             emmet_language_server = {
                 filetypes = { "css", "eruby", "html", "javascript", "javascriptreact", "less", "sass", "scss", "pug",
-                    "typescriptreact", "blade" },
+                    "typescriptreact", "blade", "vue"},
             },
 
             lua_ls = {
