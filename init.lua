@@ -45,6 +45,14 @@ require('lazy').setup({
     "laytan/cloak.nvim",
     opts = {},
   },
+  {
+    'akinsho/toggleterm.nvim',
+    version = "*",
+    opts = {
+      open_mapping = "<C-t>",
+      shade_terminals = false
+    }
+  },
   require 'plugins.neogit',
   require 'plugins.gitsigns',
   require 'plugins.nvim-tree',
