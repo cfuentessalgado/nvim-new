@@ -21,33 +21,8 @@ require 'custom/keymaps'
 require('lazy').setup({
   'tpope/vim-sleuth', -- Detect tabstop and shiftwidth automatically
   { 'numToStr/Comment.nvim', opts = {} },
-  {
-    "folke/todo-comments.nvim",
-    dependencies = { "nvim-lua/plenary.nvim" },
-    opts = {}
-  },
-  {
-    "catppuccin/nvim",
-    name = "catppuccin",
-    priority = 1000,
-  },
-  -- {
-  --   "folke/tokyonight.nvim",
-  --   lazy = false,
-  --   priority = 1000,
-  --   opts = {},
-  --   config = function()
-  --     vim.cmd("colorscheme tokyonight")
-  --   end
-  -- },
-  {
-    'akinsho/toggleterm.nvim',
-    version = "*",
-    opts = {
-      open_mapping = "<C-t>",
-      shade_terminals = false
-    }
-  },
+  require 'plugins.todo',
+  require 'plugins.toggleterm',
   require 'plugins.neogit',
   require 'plugins.gitsigns',
   require 'plugins.nvim-tree',
@@ -60,12 +35,7 @@ require('lazy').setup({
   require 'plugins.autocomplete',
   require 'plugins.trouble',
   require 'plugins.undotree',
-  {
-    'projekt0n/github-nvim-theme',
-    config = function()
-      vim.cmd("colorscheme github_dark_default")
-    end
-  }
+  require 'plugins.colorscheme',
 }, {
   ui = {
     -- If you have a Nerd Font, set icons to an empty table which will use the
