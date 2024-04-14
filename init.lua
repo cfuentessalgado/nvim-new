@@ -26,7 +26,6 @@ require('lazy').setup({
     dependencies = { "nvim-lua/plenary.nvim" },
     opts = {}
   },
-  "github/copilot.vim", -- TODO: Maybe bad idea considering the TAB issue xD
   {
     "catppuccin/nvim",
     name = "catppuccin",
@@ -40,10 +39,6 @@ require('lazy').setup({
     config = function()
       vim.cmd("colorscheme tokyonight")
     end
-  },
-  {
-    "laytan/cloak.nvim",
-    opts = {},
   },
   {
     'akinsho/toggleterm.nvim',
