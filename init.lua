@@ -31,15 +31,15 @@ require('lazy').setup({
     name = "catppuccin",
     priority = 1000,
   },
-  {
-    "folke/tokyonight.nvim",
-    lazy = false,
-    priority = 1000,
-    opts = {},
-    config = function()
-      vim.cmd("colorscheme tokyonight")
-    end
-  },
+  -- {
+  --   "folke/tokyonight.nvim",
+  --   lazy = false,
+  --   priority = 1000,
+  --   opts = {},
+  --   config = function()
+  --     vim.cmd("colorscheme tokyonight")
+  --   end
+  -- },
   {
     'akinsho/toggleterm.nvim',
     version = "*",
@@ -60,6 +60,12 @@ require('lazy').setup({
   require 'plugins.autocomplete',
   require 'plugins.trouble',
   require 'plugins.undotree',
+  {
+    'projekt0n/github-nvim-theme',
+    config = function()
+      vim.cmd("colorscheme github_dark_default")
+    end
+  }
 }, {
   ui = {
     -- If you have a Nerd Font, set icons to an empty table which will use the
