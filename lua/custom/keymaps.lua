@@ -38,6 +38,9 @@ vim.keymap.set('n', '<leader>k', '<C-w><C-k>', { desc = 'Move focus to the upper
 vim.api.nvim_set_keymap("v", "K", ":m '<-2<CR>gv=gv", { noremap = true, silent = true })
 vim.api.nvim_set_keymap("v", "J", ":m '>+1<CR>gv=gv", { noremap = true, silent = true })
 
+vim.keymap.set('n', '<C-j>', '<cmd>cnext<CR>')
+vim.keymap.set('n', '<C-k>', '<cmd>cprev<CR>')
+
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
 
