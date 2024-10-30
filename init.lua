@@ -36,6 +36,15 @@ require('lazy').setup({
   require 'plugins.trouble',
   require 'plugins.undotree',
   require 'plugins.colorscheme',
+  require 'plugins.dadbod',
+  require 'plugins.oil',
+  {
+    'windwp/nvim-autopairs',
+    event = "InsertEnter",
+    config = true
+    -- use opts = {} for passing setup options
+    -- this is equivalent to setup({}) function
+  },
 }, {
   ui = {
     -- If you have a Nerd Font, set icons to an empty table which will use the
