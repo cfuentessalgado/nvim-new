@@ -14,10 +14,14 @@ return { -- Autocompletion
         'saadparwaiz1/cmp_luasnip',
         'hrsh7th/cmp-nvim-lsp',
         'hrsh7th/cmp-path',
+        'zbirenbaum/copilot.lua',
+        'zbirenbaum/copilot-cmp',
     },
     config = function()
         local cmp = require 'cmp'
         local luasnip = require 'luasnip'
+        require('copilot').setup()
+        require('copilot_cmp').setup()
         luasnip.config.setup {}
 
         cmp.setup.filetype({ "sql" }, {
@@ -75,6 +79,7 @@ return { -- Autocompletion
                 end, { 'i', 's' }),
             },
             sources = {
+                { name = 'copilot' },
                 { name = 'nvim_lsp' },
                 { name = 'luasnip' },
                 { name = 'path' },

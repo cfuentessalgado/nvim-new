@@ -38,6 +38,7 @@ require('lazy').setup({
   require 'plugins.colorscheme',
   require 'plugins.dadbod',
   require 'plugins.oil',
+  require 'plugins.avante',
   {
     'windwp/nvim-autopairs',
     event = "InsertEnter",
