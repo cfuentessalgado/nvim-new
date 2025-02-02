@@ -152,7 +152,7 @@ return { -- LSP Configuration & Plugins
             gopls = {},
             -- pyright = {},
             rust_analyzer = {},
-            tsserver = {},
+            ts_ls = {},
             intelephense = {
                 files = { '*.php', '*.ctp' },
             },
