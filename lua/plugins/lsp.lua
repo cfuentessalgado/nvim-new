@@ -136,23 +136,13 @@ return { -- LSP Configuration & Plugins
         --  - capabilities (table): Override fields in capabilities. Can be used to disable certain LSP features.
         --  - settings (table): Override the default settings passed when initializing the server.
         --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
+        --
         local servers = {
-            -- clangd = {},
-            -- gopls = {},
-            -- pyright = {},
-            -- rust_analyzer = {},
-            -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
-            --
-            -- Some languages (like typescript) have entire language plugins that can be useful:
-            --    https://github.com/pmizio/typescript-tools.nvim
-            --
-            -- But for many setups, the LSP (`tsserver`) will work just fine
-            -- tsserver = {},
-            --
             gopls = {},
-            -- pyright = {},
             rust_analyzer = {},
-            ts_ls = {},
+            ts_ls = { -- ✅ Correctly use "ts_ls" instead of "tsserver"
+                filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact" },
+            },
             intelephense = {
                 files = { '*.php', '*.ctp' },
             },
@@ -161,32 +151,23 @@ return { -- LSP Configuration & Plugins
 
             emmet_language_server = {
                 filetypes = { "css", "eruby", "html", "javascript", "javascriptreact", "less", "sass", "scss", "pug",
-                    "typescriptreact", "blade", "vue"},
+                    "typescriptreact", "blade", "vue" },
             },
 
             lua_ls = {
-                -- cmd = {...},
-                -- filetypes { ...},
-                -- capabilities = {},
                 settings = {
                     Lua = {
                         runtime = { version = 'LuaJIT' },
                         workspace = {
                             checkThirdParty = false,
-                            -- Tells lua_ls where to find all the Lua files that you have loaded
-                            -- for your neovim configuration.
                             library = {
                                 '${3rd}/luv/library',
                                 unpack(vim.api.nvim_get_runtime_file('', true)),
                             },
-                            -- If lua_ls is really slow on your computer, you can try this instead:
-                            -- library = { vim.env.VIMRUNTIME },
                         },
                         completion = {
                             callSnippet = 'Replace',
                         },
-                        -- You can toggle below to ignore Lua_LS's noisy `missing-fields` warnings
-                        -- diagnostics = { disable = { 'missing-fields' } },
                     },
                 },
             },
