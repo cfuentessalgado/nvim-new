@@ -42,7 +42,6 @@ require('lazy').setup({
   require 'plugins.colorscheme',
   require 'plugins.dadbod',
   require 'plugins.oil',
-  require 'plugins.avante',
   require 'plugins.php',
   {
     'windwp/nvim-autopairs',

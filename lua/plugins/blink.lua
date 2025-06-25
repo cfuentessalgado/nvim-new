@@ -4,6 +4,7 @@ return {
     'rafamadriz/friendly-snippets',
     "giuxtaposition/blink-cmp-copilot",
   },
+version = '1.*',
   opts = {
     keymap = { preset = 'default' },
 
