@@ -1,4 +1,4 @@
-return {   -- Fuzzy Finder (files, lsp, etc)
+return { -- Fuzzy Finder (files, lsp, etc)
     'nvim-telescope/telescope.nvim',
     event = 'VimEnter',
     branch = '0.1.x',
@@ -41,6 +41,19 @@ return {   -- Fuzzy Finder (files, lsp, etc)
         -- This opens a window that shows you all of the keymaps for the current
         -- telescope picker. This is really useful to discover what Telescope can
         -- do as well as how to actually do it!
+        --
+
+        local picker_prefs = {
+            show_untracked = true,
+            previewer = false,
+            winblend = 10,
+            border = true,
+            theme = 'dropdown',
+            layout_config = {
+                width = 0.4,
+                height = 0.4,
+            }
+        }
 
         -- [[ Configure Telescope ]]
         -- See `:help telescope` and `:help telescope.setup()`
@@ -54,9 +67,10 @@ return {   -- Fuzzy Finder (files, lsp, etc)
             --   },
             -- },
             pickers = {
-                git_files = {
-                    show_untracked = true,
-                }
+                git_files = picker_prefs,
+                find_files = picker_prefs,
+                oldfiles = picker_prefs,
+                buffers = picker_prefs,
             },
             extensions = {
                 ['ui-select'] = {
@@ -83,7 +97,7 @@ return {   -- Fuzzy Finder (files, lsp, etc)
         vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
         vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
         vim.keymap.set('n', '<leader>g', function()
-          require('telescope.builtin').grep_string({ search = vim.fn.input("Grep > ") })
+            require('telescope.builtin').grep_string({ search = vim.fn.input("Grep > ") })
         end, {})
 
         -- Slightly advanced example of overriding default behavior and theme

@@ -44,6 +44,9 @@ require('lazy').setup({
   require 'plugins.oil',
   require 'plugins.php',
   {
+    'sindrets/diffview.nvim',
+  },
+  {
     'windwp/nvim-autopairs',
     event = "InsertEnter",
     config = true

@@ -16,11 +16,12 @@ return { -- Highlight, edit, and navigate code
 
         parser_config.blade = {
             install_info = {
-                url = "https://github.com/EmranMR/tree-sitter-blade",
+                -- url = "https://github.com/cfuentessalgado/tree-sitter-blade",
+                url = "~/repos/github.com/cfuentessalgado/tree-sitter-blade/",
                 files = { "src/parser.c" },
                 branch = "main",
             },
-            filetype = "blade"
+            filetype = "*.blade.php"
         }
 
         -- There are additional nvim-treesitter modules that you can use to interact
