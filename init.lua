@@ -62,7 +62,7 @@ require('lazy').setup({
       config = '🛠',
       event = '📅',
       ft = '📂',
-      init = '⚙',
+      init = '⚡',
       keys = '🗝',
       plugin = '🔌',
       runtime = '💻',
