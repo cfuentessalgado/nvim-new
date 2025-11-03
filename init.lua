@@ -43,7 +43,7 @@ require('lazy').setup({
   require 'plugins.dadbod',
   require 'plugins.oil',
   require 'plugins.php',
-  require 'plugins.sidekick',
+  -- require 'plugins.sidekick',  -- Disabled for now
   {
     'sindrets/diffview.nvim',
   },
