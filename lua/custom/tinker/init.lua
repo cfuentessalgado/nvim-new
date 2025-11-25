@@ -85,27 +85,29 @@ local function append_to_output(text, highlights)
 		return
 	end
 
-	local lines = vim.split(text, "\n", { plain = true })
-	local current_line_count = vim.api.nvim_buf_line_count(state.output_buffer)
-	
-	-- Get current lines
-	local current_lines = vim.api.nvim_buf_get_lines(state.output_buffer, 0, -1, false)
-	
-	-- Add new lines
-	for _, line in ipairs(lines) do
-		table.insert(current_lines, line)
+	-- Check if text contains newlines and split if needed
+	if text:find("\n") then
+		local lines = vim.split(text, "\n", { plain = true })
+		for _, line in ipairs(lines) do
+			-- Recursively call for each line (without highlights, they won't map correctly)
+			append_to_output(line, nil)
+		end
+		return
 	end
 
-	vim.api.nvim_buf_set_lines(state.output_buffer, 0, -1, false, current_lines)
+	local current_line_count = vim.api.nvim_buf_line_count(state.output_buffer)
+	local line_num = current_line_count == 1 and 0 or current_line_count -- 0-indexed, handle empty buffer
+	
+	-- Append the text (single line)
+	vim.api.nvim_buf_set_lines(state.output_buffer, -1, -1, false, { text })
 
 	-- Apply highlights if provided
-	if highlights then
+	if highlights and #highlights > 0 then
 		local namespace = vim.api.nvim_create_namespace("tinker_highlights")
-		local line_num = current_line_count - 1 -- 0-indexed
 		
 		for _, hl in ipairs(highlights) do
 			local start_col, end_col, hl_group = hl[1], hl[2], hl[3]
-			vim.api.nvim_buf_add_highlight(state.output_buffer, namespace, hl_group, line_num, start_col, end_col)
+			pcall(vim.api.nvim_buf_add_highlight, state.output_buffer, namespace, hl_group, line_num, start_col, end_col)
 		end
 	end
 
@@ -145,11 +147,27 @@ local ansi_colors = {
 	["97"] = "TinkerBrightWhite",
 }
 
--- 256 color support
+-- 256 color support - convert to RGB
+local xterm_colors = {
+	[0] = "#000000", [1] = "#800000", [2] = "#008000", [3] = "#808000",
+	[4] = "#000080", [5] = "#800080", [6] = "#008080", [7] = "#c0c0c0",
+	[8] = "#808080", [9] = "#ff0000", [10] = "#00ff00", [11] = "#ffff00",
+	[12] = "#0000ff", [13] = "#ff00ff", [14] = "#00ffff", [15] = "#ffffff",
+	-- Add some common 256 colors used by Tinker
+	[35] = "#00af5f", [38] = "#00afd7", [90] = "#870087", 
+	[208] = "#ff8700", [244] = "#808080",
+}
+
 local function get_256_color_hl(color_num)
 	local hl_name = "Tinker256_" .. color_num
 	if vim.fn.hlexists(hl_name) == 0 then
-		vim.api.nvim_set_hl(0, hl_name, { ctermfg = tonumber(color_num) })
+		local color = xterm_colors[tonumber(color_num)]
+		if color then
+			vim.api.nvim_set_hl(0, hl_name, { fg = color })
+		else
+			-- Fallback: use cterm color
+			vim.api.nvim_set_hl(0, hl_name, { ctermfg = tonumber(color_num) })
+		end
 	end
 	return hl_name
 end
@@ -229,7 +247,14 @@ local function process_output(_, data)
 					table.insert(state.accumulated_output, clean_line)
 					-- Display immediately with highlights
 					vim.schedule(function()
-						append_to_output(clean_line, highlights)
+						-- Debug: show if we have highlights
+						if highlights and #highlights > 0 then
+							-- We have highlights, apply them
+							append_to_output(clean_line, highlights)
+						else
+							-- No highlights
+							append_to_output(clean_line, nil)
+						end
 					end)
 				end
 			end
