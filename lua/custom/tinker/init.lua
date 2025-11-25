@@ -6,6 +6,7 @@ local config = {
 	save_history = true,
 	split_direction = "vertical",
 	split_ratio = 0.5,
+	snippets_dir = vim.fn.stdpath("data") .. "/tinker-snippets",
 }
 
 -- State management
@@ -17,6 +18,9 @@ local state = {
 	output_window = nil,
 	is_open = false,
 	accumulated_output = {},
+	current_snippet = nil, -- Track currently loaded snippet name
+	previous_win = nil, -- Window to return to when hiding
+	previous_buf = nil, -- Buffer to return to when hiding
 }
 
 -- Detect if current directory is a Laravel project
@@ -75,20 +79,35 @@ local function create_code_buffer()
 	return buf
 end
 
--- Append text to output buffer
-local function append_to_output(text)
+-- Append text to output buffer with highlights
+local function append_to_output(text, highlights)
 	if not state.output_buffer or not vim.api.nvim_buf_is_valid(state.output_buffer) then
 		return
 	end
 
 	local lines = vim.split(text, "\n", { plain = true })
+	local current_line_count = vim.api.nvim_buf_line_count(state.output_buffer)
+	
+	-- Get current lines
 	local current_lines = vim.api.nvim_buf_get_lines(state.output_buffer, 0, -1, false)
-
+	
+	-- Add new lines
 	for _, line in ipairs(lines) do
 		table.insert(current_lines, line)
 	end
 
 	vim.api.nvim_buf_set_lines(state.output_buffer, 0, -1, false, current_lines)
+
+	-- Apply highlights if provided
+	if highlights then
+		local namespace = vim.api.nvim_create_namespace("tinker_highlights")
+		local line_num = current_line_count - 1 -- 0-indexed
+		
+		for _, hl in ipairs(highlights) do
+			local start_col, end_col, hl_group = hl[1], hl[2], hl[3]
+			vim.api.nvim_buf_add_highlight(state.output_buffer, namespace, hl_group, line_num, start_col, end_col)
+		end
+	end
 
 	-- Auto scroll to bottom if enabled
 	if config.auto_scroll and state.output_window and vim.api.nvim_win_is_valid(state.output_window) then
@@ -105,14 +124,96 @@ local function clear_output()
 	state.accumulated_output = {}
 end
 
--- Strip ANSI escape codes from text
-local function strip_ansi(text)
-	-- Remove ANSI color codes and other escape sequences
-	text = text:gsub("\27%[[%d;]*m", "") -- Color codes
-	text = text:gsub("\27%[%d*[ABCDEFGJKST]", "") -- Cursor movement
-	text = text:gsub("\27%]%d*;[^\7]*\7", "") -- OSC sequences
-	text = text:gsub("\13", "") -- Carriage return (^M)
-	return text
+-- ANSI color code to Neovim highlight group mapping
+local ansi_colors = {
+	-- Standard colors
+	["30"] = "TinkerBlack",
+	["31"] = "TinkerRed",
+	["32"] = "TinkerGreen",
+	["33"] = "TinkerYellow",
+	["34"] = "TinkerBlue",
+	["35"] = "TinkerMagenta",
+	["36"] = "TinkerCyan",
+	["37"] = "TinkerWhite",
+	["90"] = "TinkerBrightBlack",
+	["91"] = "TinkerBrightRed",
+	["92"] = "TinkerBrightGreen",
+	["93"] = "TinkerBrightYellow",
+	["94"] = "TinkerBrightBlue",
+	["95"] = "TinkerBrightMagenta",
+	["96"] = "TinkerBrightCyan",
+	["97"] = "TinkerBrightWhite",
+}
+
+-- 256 color support
+local function get_256_color_hl(color_num)
+	local hl_name = "Tinker256_" .. color_num
+	if vim.fn.hlexists(hl_name) == 0 then
+		vim.api.nvim_set_hl(0, hl_name, { ctermfg = tonumber(color_num) })
+	end
+	return hl_name
+end
+
+-- Parse ANSI codes and return clean text with highlight positions
+local function parse_ansi(text)
+	local clean_text = ""
+	local highlights = {}
+	local pos = 0
+	local current_hl = nil
+	
+	-- Remove carriage returns first
+	text = text:gsub("\13", "")
+	
+	local i = 1
+	while i <= #text do
+		-- Check for ANSI escape sequence
+		local esc_start, esc_end, codes = text:find("\27%[([%d;]*)m", i)
+		
+		if esc_start then
+			-- Add text before escape sequence
+			if esc_start > i then
+				local chunk = text:sub(i, esc_start - 1)
+				if current_hl then
+					table.insert(highlights, { pos, pos + #chunk, current_hl })
+				end
+				clean_text = clean_text .. chunk
+				pos = pos + #chunk
+			end
+			
+			-- Parse the color codes
+			if codes == "" or codes == "0" or codes == "39" or codes == "49" then
+				-- Reset
+				current_hl = nil
+			else
+				-- Handle 256 color format (38;5;N)
+				local color_256 = codes:match("38;5;(%d+)")
+				if color_256 then
+					current_hl = get_256_color_hl(color_256)
+				else
+					-- Extract color code (handle multiple codes separated by ;)
+					for code in codes:gmatch("[^;]+") do
+						if code == "1" then
+							-- Bold - we'll ignore for now
+						elseif ansi_colors[code] then
+							current_hl = ansi_colors[code]
+						end
+					end
+				end
+			end
+			
+			i = esc_end + 1
+		else
+			-- No more escape sequences, add remaining text
+			local chunk = text:sub(i)
+			if current_hl and #chunk > 0 then
+				table.insert(highlights, { pos, pos + #chunk, current_hl })
+			end
+			clean_text = clean_text .. chunk
+			break
+		end
+	end
+	
+	return clean_text, highlights
 end
 
 -- Process tinker output
@@ -120,15 +221,15 @@ local function process_output(_, data)
 	if data then
 		for _, line in ipairs(data) do
 			if line ~= "" then
-				-- Strip ANSI codes before storing and displaying
-				local clean_line = strip_ansi(line)
+				-- Parse ANSI codes and get highlights
+				local clean_line, highlights = parse_ansi(line)
 				
 				-- Skip empty lines and prompt markers
 				if clean_line ~= "" and clean_line ~= ">" and not clean_line:match("^%s*>%s*$") then
 					table.insert(state.accumulated_output, clean_line)
-					-- Display immediately
+					-- Display immediately with highlights
 					vim.schedule(function()
-						append_to_output(clean_line)
+						append_to_output(clean_line, highlights)
 					end)
 				end
 			end
@@ -256,15 +357,60 @@ local function setup_keymaps()
 	-- Clear output
 	vim.keymap.set("n", "<leader>tc", clear_output, vim.tbl_extend("force", opts, { desc = "Clear output" }))
 
-	-- Quit tinker
+	-- Hide tinker (toggle off, keeps session)
 	vim.keymap.set("n", "<leader>tq", function()
-		M.close()
-	end, vim.tbl_extend("force", opts, { desc = "Quit tinker" }))
+		M.hide()
+	end, vim.tbl_extend("force", opts, { desc = "Hide tinker" }))
 
-	-- Also allow q to quit from output buffer
-	vim.keymap.set("n", "q", function()
+	-- Kill tinker session completely
+	vim.keymap.set("n", "<leader>tk", function()
 		M.close()
+	end, vim.tbl_extend("force", opts, { desc = "Kill tinker session" }))
+
+	-- Restart tinker (reload fresh code)
+	vim.keymap.set("n", "<leader>tr", function()
+		M.restart()
+	end, vim.tbl_extend("force", opts, { desc = "Restart tinker (reload code)" }))
+
+	-- Snippet management
+	vim.keymap.set("n", "<leader>ts", function()
+		M.save_snippet()
+	end, vim.tbl_extend("force", opts, { desc = "Save snippet" }))
+
+	vim.keymap.set("n", "<leader>tl", function()
+		M.load_snippet()
+	end, vim.tbl_extend("force", opts, { desc = "Load snippet" }))
+
+	vim.keymap.set("n", "<leader>td", function()
+		M.delete_snippet()
+	end, vim.tbl_extend("force", opts, { desc = "Delete snippet" }))
+
+	vim.keymap.set("n", "<leader>tn", function()
+		M.new_snippet()
+	end, vim.tbl_extend("force", opts, { desc = "New snippet" }))
+
+	-- Also allow q to hide from output buffer
+	vim.keymap.set("n", "q", function()
+		M.hide()
 	end, { buffer = state.output_buffer, silent = true, noremap = true })
+
+	-- Set up autocmd for :w to save snippet
+	vim.api.nvim_create_autocmd("BufWriteCmd", {
+		buffer = state.code_buffer,
+		callback = function()
+			if state.current_snippet then
+				-- Re-save to the current snippet
+				M.save_snippet(state.current_snippet)
+			else
+				-- Prompt for a name
+				vim.ui.input({ prompt = "Save snippet as: " }, function(input)
+					if input and input ~= "" then
+						M.save_snippet(input)
+					end
+				end)
+			end
+		end,
+	})
 end
 
 -- Open tinker interface
@@ -278,6 +424,10 @@ function M.open()
 		vim.notify("Tinker is already open", vim.log.levels.INFO)
 		return
 	end
+
+	-- Save current window and buffer to return to later
+	state.previous_win = vim.api.nvim_get_current_win()
+	state.previous_buf = vim.api.nvim_get_current_buf()
 
 	-- Create buffers
 	state.code_buffer = create_code_buffer()
@@ -326,7 +476,146 @@ function M.open()
 	vim.notify("Laravel Tinker started! Press <CR> or <leader>te to execute code", vim.log.levels.INFO)
 end
 
--- Close tinker interface
+-- Hide tinker interface (keeps session alive)
+function M.hide()
+	if not state.is_open then
+		return
+	end
+
+	-- Mark buffers as not modified so we can close without warnings
+	if state.code_buffer and vim.api.nvim_buf_is_valid(state.code_buffer) then
+		vim.api.nvim_buf_set_option(state.code_buffer, "modified", false)
+	end
+	if state.output_buffer and vim.api.nvim_buf_is_valid(state.output_buffer) then
+		vim.api.nvim_buf_set_option(state.output_buffer, "modified", false)
+	end
+
+	-- Count total windows (excluding floating windows)
+	local total_windows = 0
+	for _, win in ipairs(vim.api.nvim_list_wins()) do
+		local config = vim.api.nvim_win_get_config(win)
+		if config.relative == "" then
+			total_windows = total_windows + 1
+		end
+	end
+
+	local tinker_windows = 0
+	if state.code_window and vim.api.nvim_win_is_valid(state.code_window) then
+		tinker_windows = tinker_windows + 1
+	end
+	if state.output_window and vim.api.nvim_win_is_valid(state.output_window) then
+		tinker_windows = tinker_windows + 1
+	end
+
+	-- If closing tinker would close all windows, restore previous buffer in current window
+	if total_windows <= tinker_windows then
+		-- Switch to code window
+		vim.api.nvim_set_current_win(state.code_window)
+		
+		-- Restore the previous buffer (or create a new one if it's no longer valid)
+		if state.previous_buf and vim.api.nvim_buf_is_valid(state.previous_buf) then
+			vim.api.nvim_set_current_buf(state.previous_buf)
+		else
+			local new_buf = vim.api.nvim_create_buf(true, false)
+			vim.api.nvim_set_current_buf(new_buf)
+		end
+		
+		-- Now close the output window only
+		if state.output_window and vim.api.nvim_win_is_valid(state.output_window) then
+			vim.api.nvim_win_close(state.output_window, false)
+		end
+		
+		-- The code window is now showing the previous buffer
+		state.code_window = nil
+		state.output_window = nil
+		state.is_open = false
+		return
+	end
+
+	-- Normal case: close both windows and return to previous window
+	if state.code_window and vim.api.nvim_win_is_valid(state.code_window) then
+		vim.api.nvim_win_close(state.code_window, false)
+	end
+	if state.output_window and vim.api.nvim_win_is_valid(state.output_window) then
+		vim.api.nvim_win_close(state.output_window, false)
+	end
+
+	-- Try to restore the previous window and buffer
+	if state.previous_win and vim.api.nvim_win_is_valid(state.previous_win) then
+		vim.api.nvim_set_current_win(state.previous_win)
+		if state.previous_buf and vim.api.nvim_buf_is_valid(state.previous_buf) then
+			vim.api.nvim_set_current_buf(state.previous_buf)
+		end
+	end
+
+	-- Mark as hidden but keep everything else
+	state.code_window = nil
+	state.output_window = nil
+	state.is_open = false
+end
+
+-- Show tinker interface (restore from hidden state)
+function M.show()
+	if state.is_open then
+		return
+	end
+
+	-- Save current window and buffer to return to later
+	state.previous_win = vim.api.nvim_get_current_win()
+	state.previous_buf = vim.api.nvim_get_current_buf()
+
+	-- Check if we have an existing session
+	local has_session = state.code_buffer 
+		and vim.api.nvim_buf_is_valid(state.code_buffer)
+		and state.tinker_job_id
+
+	if has_session then
+		-- Restart tinker to pick up fresh code changes
+		if state.tinker_job_id then
+			vim.fn.jobstop(state.tinker_job_id)
+			state.tinker_job_id = nil
+		end
+		
+		-- Clear output buffer
+		vim.api.nvim_buf_set_lines(state.output_buffer, 0, -1, false, {})
+		
+		-- Restore windows with existing buffers
+		if config.split_direction == "vertical" then
+			vim.cmd("vsplit")
+			state.output_window = vim.api.nvim_get_current_win()
+			vim.api.nvim_win_set_buf(state.output_window, state.output_buffer)
+
+			vim.cmd("wincmd h")
+			state.code_window = vim.api.nvim_get_current_win()
+			vim.api.nvim_win_set_buf(state.code_window, state.code_buffer)
+
+			local total_width = vim.o.columns
+			local code_width = math.floor(total_width * config.split_ratio)
+			vim.api.nvim_win_set_width(state.code_window, code_width)
+		else
+			vim.cmd("split")
+			state.code_window = vim.api.nvim_get_current_win()
+			vim.api.nvim_win_set_buf(state.code_window, state.code_buffer)
+
+			vim.cmd("wincmd j")
+			state.output_window = vim.api.nvim_get_current_win()
+			vim.api.nvim_win_set_buf(state.output_window, state.output_buffer)
+
+			vim.api.nvim_set_current_win(state.code_window)
+		end
+
+		-- Start fresh tinker process
+		start_tinker()
+		
+		state.is_open = true
+		vim.notify("Tinker session restored (fresh code loaded)", vim.log.levels.INFO)
+	else
+		-- No existing session, open fresh
+		M.open()
+	end
+end
+
+-- Close tinker interface completely (kills session)
 function M.close()
 	-- Stop tinker job
 	if state.tinker_job_id then
@@ -357,25 +646,262 @@ function M.close()
 	state.output_window = nil
 	state.is_open = false
 	state.accumulated_output = {}
+	
+	vim.notify("Tinker session closed", vim.log.levels.INFO)
 end
 
--- Toggle tinker interface
+-- Toggle tinker interface (hide/show, preserves session)
 function M.toggle()
 	if state.is_open then
-		M.close()
+		M.hide()
 	else
-		M.open()
+		M.show()
 	end
+end
+
+-- Restart tinker process (reload fresh code from app)
+function M.restart()
+	if not state.is_open then
+		vim.notify("Tinker is not open", vim.log.levels.WARN)
+		return
+	end
+
+	-- Stop current tinker job
+	if state.tinker_job_id then
+		vim.fn.jobstop(state.tinker_job_id)
+		state.tinker_job_id = nil
+	end
+
+	-- Clear output buffer
+	if state.output_buffer and vim.api.nvim_buf_is_valid(state.output_buffer) then
+		vim.api.nvim_buf_set_lines(state.output_buffer, 0, -1, false, {})
+	end
+
+	-- Start fresh tinker process
+	if start_tinker() then
+		vim.notify("Tinker restarted - fresh code loaded!", vim.log.levels.INFO)
+	else
+		vim.notify("Failed to restart Tinker", vim.log.levels.ERROR)
+	end
+end
+
+-- Ensure snippets directory exists
+local function ensure_snippets_dir()
+	local dir = config.snippets_dir
+	if vim.fn.isdirectory(dir) == 0 then
+		vim.fn.mkdir(dir, "p")
+	end
+end
+
+-- Get list of available snippets
+local function get_snippets()
+	ensure_snippets_dir()
+	local snippets = {}
+	local files = vim.fn.globpath(config.snippets_dir, "*.php", false, true)
+	
+	for _, file in ipairs(files) do
+		local name = vim.fn.fnamemodify(file, ":t:r")
+		table.insert(snippets, name)
+	end
+	
+	return snippets
+end
+
+-- Save current code buffer as a snippet
+function M.save_snippet(name)
+	if not state.code_buffer or not vim.api.nvim_buf_is_valid(state.code_buffer) then
+		vim.notify("No Tinker code buffer to save", vim.log.levels.ERROR)
+		return
+	end
+
+	if not name or name == "" then
+		vim.ui.input({ prompt = "Snippet name: " }, function(input)
+			if input and input ~= "" then
+				M.save_snippet(input)
+			end
+		end)
+		return
+	end
+
+	ensure_snippets_dir()
+	
+	local lines = vim.api.nvim_buf_get_lines(state.code_buffer, 0, -1, false)
+	local filepath = config.snippets_dir .. "/" .. name .. ".php"
+	
+	local file = io.open(filepath, "w")
+	if not file then
+		vim.notify("Failed to save snippet: " .. name, vim.log.levels.ERROR)
+		return
+	end
+	
+	file:write(table.concat(lines, "\n"))
+	file:close()
+	
+	-- Track the current snippet name
+	state.current_snippet = name
+	
+	-- Update buffer name to show it's a snippet
+	vim.api.nvim_buf_set_name(state.code_buffer, "Tinker: " .. name)
+	
+	vim.notify("Snippet saved: " .. name, vim.log.levels.INFO)
+end
+
+-- Load a snippet into the code buffer
+function M.load_snippet(name)
+	if not state.code_buffer or not vim.api.nvim_buf_is_valid(state.code_buffer) then
+		vim.notify("Open Tinker first with :Tinker", vim.log.levels.ERROR)
+		return
+	end
+
+	if not name or name == "" then
+		-- Show picker with available snippets
+		local snippets = get_snippets()
+		
+		if #snippets == 0 then
+			vim.notify("No snippets saved yet", vim.log.levels.WARN)
+			return
+		end
+		
+		vim.ui.select(snippets, {
+			prompt = "Select snippet to load:",
+		}, function(choice)
+			if choice then
+				M.load_snippet(choice)
+			end
+		end)
+		return
+	end
+
+	local filepath = config.snippets_dir .. "/" .. name .. ".php"
+	
+	if vim.fn.filereadable(filepath) == 0 then
+		vim.notify("Snippet not found: " .. name, vim.log.levels.ERROR)
+		return
+	end
+	
+	local file = io.open(filepath, "r")
+	if not file then
+		vim.notify("Failed to load snippet: " .. name, vim.log.levels.ERROR)
+		return
+	end
+	
+	local content = file:read("*all")
+	file:close()
+	
+	local lines = vim.split(content, "\n", { plain = true })
+	vim.api.nvim_buf_set_lines(state.code_buffer, 0, -1, false, lines)
+	
+	-- Track the current snippet name
+	state.current_snippet = name
+	
+	-- Update buffer name to show it's a snippet
+	vim.api.nvim_buf_set_name(state.code_buffer, "Tinker: " .. name)
+	
+	vim.notify("Snippet loaded: " .. name, vim.log.levels.INFO)
+end
+
+-- Delete a snippet
+function M.delete_snippet(name)
+	if not name or name == "" then
+		local snippets = get_snippets()
+		
+		if #snippets == 0 then
+			vim.notify("No snippets to delete", vim.log.levels.WARN)
+			return
+		end
+		
+		vim.ui.select(snippets, {
+			prompt = "Select snippet to delete:",
+		}, function(choice)
+			if choice then
+				M.delete_snippet(choice)
+			end
+		end)
+		return
+	end
+
+	local filepath = config.snippets_dir .. "/" .. name .. ".php"
+	
+	if vim.fn.filereadable(filepath) == 0 then
+		vim.notify("Snippet not found: " .. name, vim.log.levels.ERROR)
+		return
+	end
+	
+	vim.fn.delete(filepath)
+	vim.notify("Snippet deleted: " .. name, vim.log.levels.INFO)
+end
+
+-- List all snippets
+function M.list_snippets()
+	local snippets = get_snippets()
+	
+	if #snippets == 0 then
+		vim.notify("No snippets saved yet", vim.log.levels.INFO)
+		return
+	end
+	
+	vim.notify("Saved snippets:\n  • " .. table.concat(snippets, "\n  • "), vim.log.levels.INFO)
+end
+
+-- Create a new snippet (clear buffer and reset current_snippet)
+function M.new_snippet()
+	if not state.code_buffer or not vim.api.nvim_buf_is_valid(state.code_buffer) then
+		vim.notify("Open Tinker first with :Tinker", vim.log.levels.ERROR)
+		return
+	end
+
+	-- Clear the buffer
+	local initial_content = {
+		"<?php",
+		"",
+		"// New Tinker snippet - Press :w to save",
+		"",
+	}
+	vim.api.nvim_buf_set_lines(state.code_buffer, 0, -1, false, initial_content)
+	
+	-- Reset current snippet tracking
+	state.current_snippet = nil
+	
+	-- Update buffer name
+	vim.api.nvim_buf_set_name(state.code_buffer, "Tinker Code")
+	
+	vim.notify("New snippet buffer created", vim.log.levels.INFO)
+end
+
+-- Setup highlight groups
+local function setup_highlights()
+	-- Standard ANSI colors
+	vim.api.nvim_set_hl(0, "TinkerBlack", { fg = "#2e3436" })
+	vim.api.nvim_set_hl(0, "TinkerRed", { fg = "#cc0000" })
+	vim.api.nvim_set_hl(0, "TinkerGreen", { fg = "#4e9a06" })
+	vim.api.nvim_set_hl(0, "TinkerYellow", { fg = "#c4a000" })
+	vim.api.nvim_set_hl(0, "TinkerBlue", { fg = "#3465a4" })
+	vim.api.nvim_set_hl(0, "TinkerMagenta", { fg = "#75507b" })
+	vim.api.nvim_set_hl(0, "TinkerCyan", { fg = "#06989a" })
+	vim.api.nvim_set_hl(0, "TinkerWhite", { fg = "#d3d7cf" })
+	
+	-- Bright colors
+	vim.api.nvim_set_hl(0, "TinkerBrightBlack", { fg = "#555753" })
+	vim.api.nvim_set_hl(0, "TinkerBrightRed", { fg = "#ef2929" })
+	vim.api.nvim_set_hl(0, "TinkerBrightGreen", { fg = "#8ae234" })
+	vim.api.nvim_set_hl(0, "TinkerBrightYellow", { fg = "#fce94f" })
+	vim.api.nvim_set_hl(0, "TinkerBrightBlue", { fg = "#729fcf" })
+	vim.api.nvim_set_hl(0, "TinkerBrightMagenta", { fg = "#ad7fa8" })
+	vim.api.nvim_set_hl(0, "TinkerBrightCyan", { fg = "#34e2e2" })
+	vim.api.nvim_set_hl(0, "TinkerBrightWhite", { fg = "#eeeeec" })
 end
 
 -- Setup function
 function M.setup(opts)
 	config = vim.tbl_deep_extend("force", config, opts or {})
 
+	-- Setup highlights
+	setup_highlights()
+
 	-- Create user commands
 	vim.api.nvim_create_user_command("Tinker", function()
-		M.open()
-	end, { desc = "Open Laravel Tinker" })
+		M.toggle()
+	end, { desc = "Toggle Laravel Tinker" })
 
 	vim.api.nvim_create_user_command("TinkerClose", function()
 		M.close()
@@ -405,6 +931,27 @@ function M.setup(opts)
 			vim.notify("Tinker is not open", vim.log.levels.INFO)
 		end
 	end, { desc = "Show Tinker status" })
+
+	-- Snippet management commands
+	vim.api.nvim_create_user_command("TinkerSave", function(opts)
+		M.save_snippet(opts.args)
+	end, { nargs = "?", desc = "Save current Tinker code as snippet" })
+
+	vim.api.nvim_create_user_command("TinkerLoad", function(opts)
+		M.load_snippet(opts.args)
+	end, { nargs = "?", desc = "Load a Tinker snippet" })
+
+	vim.api.nvim_create_user_command("TinkerDelete", function(opts)
+		M.delete_snippet(opts.args)
+	end, { nargs = "?", desc = "Delete a Tinker snippet" })
+
+	vim.api.nvim_create_user_command("TinkerList", function()
+		M.list_snippets()
+	end, { desc = "List all Tinker snippets" })
+
+	vim.api.nvim_create_user_command("TinkerNew", function()
+		M.new_snippet()
+	end, { desc = "Create new Tinker snippet" })
 end
 
 return M

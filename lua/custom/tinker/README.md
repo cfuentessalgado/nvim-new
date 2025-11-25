@@ -17,10 +17,20 @@ A free Tinkerwell alternative for Neovim! Execute Laravel code interactively wit
 
 ### Commands
 
-- `:Tinker` - Open Laravel Tinker
-- `:TinkerClose` - Close Tinker
-- `:TinkerToggle` - Toggle Tinker
+**Basic Commands:**
+- `:Tinker` - Toggle Laravel Tinker (show/hide, preserves session)
+- `:TinkerClose` - Kill Tinker session completely
+- `:TinkerToggle` - Toggle Tinker (alias for `:Tinker`)
 - `:TinkerClear` - Clear output buffer
+- `:TinkerStatus` - Show Tinker status
+
+**Snippet Management:**
+- `:TinkerSave [name]` - Save current code buffer as snippet
+- `:TinkerLoad [name]` - Load a snippet (shows picker if no name)
+- `:TinkerDelete [name]` - Delete a snippet (shows picker if no name)
+- `:TinkerList` - List all saved snippets
+- `:TinkerNew` - Create new snippet (clear buffer)
+- `:w` - In code buffer, saves snippet (smart save based on current state)
 
 ### Keybindings
 
@@ -31,10 +41,16 @@ A free Tinkerwell alternative for Neovim! Execute Laravel code interactively wit
 - `<CR>` or `<leader>te` - Execute current line (normal mode)
 - `<CR>` or `<leader>te` - Execute selection (visual mode)
 - `<leader>tc` - Clear output
-- `<leader>tq` - Quit tinker
+- `<leader>tq` - Hide tinker (toggle off, keeps session)
+- `<leader>tk` - Kill tinker session completely
+- `<leader>ts` - Save current buffer as snippet
+- `<leader>tl` - Load a snippet
+- `<leader>td` - Delete a snippet
+- `<leader>tn` - New snippet (clear buffer)
+- `:w` - Save snippet (if loaded, updates it; if new, prompts for name)
 
 **Inside output buffer:**
-- `q` - Quit tinker
+- `q` - Hide tinker
 
 ### Quick Start
 
@@ -66,6 +82,53 @@ foreach($users as $user) {
     echo $user->name;
 }
 ```
+
+### Snippet Workflow
+
+Save your commonly used Tinker commands as snippets for quick reuse:
+
+1. **Write some useful code** in the Tinker buffer:
+   ```php
+   // Database queries
+   User::count()
+   Post::where('published', true)->count()
+   
+   // Check cache
+   Cache::get('key')
+   ```
+
+2. **Save it**: 
+   - Press `:w` and enter a name when prompted
+   - Or press `<leader>ts` or run `:TinkerSave database-check`
+
+3. **Later, load it**: 
+   - Press `<leader>tl` and select from the picker
+   - Or run `:TinkerLoad database-check`
+   - The buffer name will show "Tinker: database-check"
+
+4. **Edit and re-save**: 
+   - Just press `:w` to update the loaded snippet
+   - No need to enter the name again!
+
+5. **Manage snippets**:
+   - New snippet: `<leader>tn` or `:TinkerNew`
+   - List all: `:TinkerList`
+   - Delete: `<leader>td` or `:TinkerDelete snippet-name`
+
+6. **Toggle workflow**:
+   - Press `<leader>lt` or `:Tinker` to hide Tinker and resume editing
+   - Press `<leader>lt` again to show it - your code and session are still there!
+   - Use `<leader>tk` or `:TinkerClose` to kill the session completely
+
+**Snippet ideas:**
+- Database health checks
+- User testing scenarios
+- Cache debugging
+- Queue inspection
+- Model relationship tests
+- Common development tasks
+
+Snippets are stored in: `~/.local/share/nvim/tinker-snippets/`
 
 ## Configuration
 
