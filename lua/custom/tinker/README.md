@@ -7,62 +7,45 @@ A free Tinkerwell alternative for Neovim! Execute Laravel code interactively wit
 - ✅ Detects Laravel projects automatically (checks `composer.json` for `laravel/framework`)
 - ✅ Split view: PHP code buffer (LEFT) + Output buffer (RIGHT)
 - ✅ Full LSP support in the code buffer
-- ✅ Execute current line or visual selection
-- ✅ Auto-scrolling output
-- ✅ Real-time output display
-- ✅ Clean output (ANSI codes stripped automatically)
-- ✅ Syntax highlighting in both buffers
+- ✅ Execute current line or visual selection with `<CR>`
+- ✅ Auto-saves to project-specific file
+- ✅ Real-time output display with syntax highlighting
+- ✅ Clean, minimal UX
 
 ## Usage
 
 ### Commands
 
-**Basic Commands:**
-- `:Tinker` - Toggle Laravel Tinker (show/hide, preserves session)
-- `:TinkerClose` - Kill Tinker session completely
-- `:TinkerToggle` - Toggle Tinker (alias for `:Tinker`)
-- `:TinkerClear` - Clear output buffer
-- `:TinkerStatus` - Show Tinker status
-
-**Snippet Management:**
-- `:TinkerSave [name]` - Save current code buffer as snippet
-- `:TinkerLoad [name]` - Load a snippet (shows picker if no name)
-- `:TinkerDelete [name]` - Delete a snippet (shows picker if no name)
-- `:TinkerList` - List all saved snippets
-- `:TinkerNew` - Create new snippet (clear buffer)
-- `:w` - In code buffer, saves snippet (smart save based on current state)
+- `:Tinker` - Toggle Laravel Tinker (open/close)
 
 ### Keybindings
 
 **Global:**
-- `<leader>lt` - Open Laravel Tinker
+- `<leader>lt` - Toggle Laravel Tinker
 
 **Inside Tinker code buffer:**
-- `<CR>` or `<leader>te` - Execute current line (normal mode)
-- `<CR>` or `<leader>te` - Execute selection (visual mode)
+- `<CR>` - Execute current line (normal mode) or selection (visual mode)
 - `<leader>tc` - Clear output
-- `<leader>tq` - Hide tinker (toggle off, keeps session)
-- `<leader>tk` - Kill tinker session completely
-- `<leader>ts` - Save current buffer as snippet
-- `<leader>tl` - Load a snippet
-- `<leader>td` - Delete a snippet
-- `<leader>tn` - New snippet (clear buffer)
-- `:w` - Save snippet (if loaded, updates it; if new, prompts for name)
+- `:w` - Save your tinker session
 
 **Inside output buffer:**
-- `q` - Hide tinker
+- `q` - Close tinker
 
 ### Quick Start
 
 1. Open a Laravel project
 2. Press `<leader>lt` or run `:Tinker`
-3. Write PHP code in the left buffer (no need for `<?php` tag)
+3. Write PHP code in the left buffer (start with `<?php` if you want)
 4. Press `<CR>` to execute the current line
 5. See results in the right buffer
+6. Press `:w` to save your session
+7. Press `<leader>lt` or `:Tinker` again to close - your work is auto-saved!
 
 ### Examples
 
 ```php
+<?php
+
 // Get user count
 User::count()
 
@@ -83,52 +66,14 @@ foreach($users as $user) {
 }
 ```
 
-### Snippet Workflow
+### How Auto-Save Works
 
-Save your commonly used Tinker commands as snippets for quick reuse:
-
-1. **Write some useful code** in the Tinker buffer:
-   ```php
-   // Database queries
-   User::count()
-   Post::where('published', true)->count()
-   
-   // Check cache
-   Cache::get('key')
-   ```
-
-2. **Save it**: 
-   - Press `:w` and enter a name when prompted
-   - Or press `<leader>ts` or run `:TinkerSave database-check`
-
-3. **Later, load it**: 
-   - Press `<leader>tl` and select from the picker
-   - Or run `:TinkerLoad database-check`
-   - The buffer name will show "Tinker: database-check"
-
-4. **Edit and re-save**: 
-   - Just press `:w` to update the loaded snippet
-   - No need to enter the name again!
-
-5. **Manage snippets**:
-   - New snippet: `<leader>tn` or `:TinkerNew`
-   - List all: `:TinkerList`
-   - Delete: `<leader>td` or `:TinkerDelete snippet-name`
-
-6. **Toggle workflow**:
-   - Press `<leader>lt` or `:Tinker` to hide Tinker and resume editing
-   - Press `<leader>lt` again to show it - your code and session are still there!
-   - Use `<leader>tk` or `:TinkerClose` to kill the session completely
-
-**Snippet ideas:**
-- Database health checks
-- User testing scenarios
-- Cache debugging
-- Queue inspection
-- Model relationship tests
-- Common development tasks
-
-Snippets are stored in: `~/.local/share/nvim/tinker-snippets/`
+Each Laravel project gets its own tinker file:
+- Your code is automatically saved to `~/.config/mytinker/[project-path].php`
+- For example: `~/.config/mytinker/repos/assetplan/Backoffice.php`
+- When you toggle `:Tinker`, it always loads your last session for that project
+- Just press `:w` to manually save anytime
+- Auto-saves when you close tinker
 
 ## Configuration
 
@@ -137,9 +82,9 @@ Default configuration in `/lua/plugins/tinker.lua`:
 ```lua
 {
     auto_scroll = true,           -- Auto scroll output buffer
-    save_history = true,          -- Save tinker history (future feature)
     split_direction = "vertical", -- 'vertical' or 'horizontal'
     split_ratio = 0.5,           -- Ratio of code buffer to output buffer
+    tinker_dir = "~/.config/mytinker", -- Where to store project sessions
 }
 ```
 
