@@ -41,6 +41,35 @@ A free Tinkerwell alternative for Neovim! Execute Laravel code interactively wit
 6. Press `:w` to save your session
 7. Press `<leader>lt` or `:Tinker` again to close - your work is auto-saved!
 
+### Docker Support
+
+Tinker supports running inside Docker containers! Just add a mode comment at the top of your buffer:
+
+```php
+<?php
+// mode:docker
+
+User::count()
+```
+
+**Available modes:**
+- `// mode:docker` - Uses `docker-compose exec app php artisan tinker`
+- `// mode:sail` - Uses Laravel Sail: `./vendor/bin/sail tinker`
+- `// mode:docker-compose:web` - Custom container: `docker-compose exec web php artisan tinker`
+- `// mode:docker:container-name` - Direct docker exec: `docker exec -it container-name php artisan tinker`
+- `// mode:docker:container-name:/path/in/container` - Docker exec with working directory: `docker exec -it -w /path/in/container container-name php artisan tinker`
+- No mode comment - Runs locally: `php artisan tinker`
+
+**Example with Docker path:**
+```php
+<?php
+// mode:docker:dev-kit-php81-1:/var/www/backoffice
+
+User::count()
+```
+
+The mode is saved with your session, so you only need to set it once per project!
+
 ### Examples
 
 ```php

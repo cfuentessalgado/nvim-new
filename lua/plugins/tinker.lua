@@ -19,7 +19,7 @@ return {
 			})
 		end,
 		keys = {
-			{ "<leader>lt", "<cmd>Tinker<cr>", desc = "Toggle Laravel Tinker" },
+			{ "<leader>tt", "<cmd>Tinker<cr>", desc = "Toggle Tinker" },
 		},
 	},
 }

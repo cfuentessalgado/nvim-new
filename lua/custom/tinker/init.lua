@@ -6,6 +6,7 @@ local config = {
 	split_direction = "vertical",
 	split_ratio = 0.5,
 	tinker_dir = vim.fn.expand("~/.config/mytinker"),
+	docker_command = nil, -- Custom docker command, or nil for auto-detect
 }
 
 -- State management
@@ -99,6 +100,64 @@ local function is_laravel_project()
 
 	-- Check if laravel/framework is in the dependencies
 	return content:match('"laravel/framework"') ~= nil
+end
+
+-- Parse mode from buffer comments
+-- Looks for comments like: // mode:docker, // mode:sail, // mode:docker-compose
+local function parse_mode_from_buffer()
+	if not state.code_buffer or not vim.api.nvim_buf_is_valid(state.code_buffer) then
+		return nil
+	end
+	
+	-- Check first 5 lines for mode comment
+	local lines = vim.api.nvim_buf_get_lines(state.code_buffer, 0, 5, false)
+	for _, line in ipairs(lines) do
+		local mode = line:match("^//+%s*mode:%s*(.+)$")
+		if mode then
+			return vim.trim(mode)
+		end
+	end
+	
+	return nil
+end
+
+-- Get tinker command based on mode
+local function get_tinker_command()
+	local mode = parse_mode_from_buffer()
+	
+	-- If user provided custom docker command in config, use it
+	if config.docker_command then
+		return vim.split(config.docker_command, " ")
+	end
+	
+	-- If no mode, run locally
+	if not mode then
+		return { "php", "artisan", "tinker" }
+	end
+	
+	-- Mode-based commands
+	if mode == "docker" then
+		-- Generic docker-compose with 'app' container
+		return { "docker-compose", "exec", "app", "php", "artisan", "tinker" }
+	elseif mode == "sail" then
+		-- Laravel Sail
+		return { "./vendor/bin/sail", "tinker" }
+	elseif mode:match("^docker%-compose:(.+)$") then
+		-- Custom docker-compose container: // mode:docker-compose:web
+		local container = mode:match("^docker%-compose:(.+)$")
+		return { "docker-compose", "exec", container, "php", "artisan", "tinker" }
+	elseif mode:match("^docker:(.+):(.+)$") then
+		-- Direct docker exec with path: // mode:docker:dev-kit-php81-1:/var/www/backoffice
+		local container, workdir = mode:match("^docker:(.+):(.+)$")
+		return { "docker", "exec", "-it", "-w", workdir, container, "php", "artisan", "tinker" }
+	elseif mode:match("^docker:(.+)$") then
+		-- Direct docker exec: // mode:docker:myapp_web_1
+		local container = mode:match("^docker:(.+)$")
+		return { "docker", "exec", "-it", container, "php", "artisan", "tinker" }
+	end
+	
+	-- Default: run locally
+	return { "php", "artisan", "tinker" }
 end
 
 -- Create output buffer with proper settings
@@ -242,13 +301,13 @@ local function parse_ansi(text)
 	local pos = 0
 	local current_hl = nil
 	
-	-- Remove carriage returns first
-	text = text:gsub("\13", "")
+	-- Remove carriage returns
+	text = text:gsub("\r", "")
 	
 	local i = 1
 	while i <= #text do
 		-- Check for ANSI escape sequence
-		local esc_start, esc_end, codes = text:find("\27%[([%d;]*)m", i)
+		local esc_start, esc_end = text:find("\27%[[^m]*m", i)
 		
 		if esc_start then
 			-- Add text before escape sequence
@@ -261,7 +320,8 @@ local function parse_ansi(text)
 				pos = pos + #chunk
 			end
 			
-			-- Parse the color codes
+			-- Extract and parse the color codes
+			local codes = text:sub(esc_start, esc_end):match("\27%[([^m]*)m")
 			if codes == "" or codes == "0" or codes == "39" or codes == "49" then
 				-- Reset
 				current_hl = nil
@@ -273,9 +333,7 @@ local function parse_ansi(text)
 				else
 					-- Extract color code (handle multiple codes separated by ;)
 					for code in codes:gmatch("[^;]+") do
-						if code == "1" then
-							-- Bold - we'll ignore for now
-						elseif ansi_colors[code] then
+						if code ~= "1" and ansi_colors[code] then
 							current_hl = ansi_colors[code]
 						end
 					end
@@ -284,13 +342,32 @@ local function parse_ansi(text)
 			
 			i = esc_end + 1
 		else
-			-- No more escape sequences, add remaining text
-			local chunk = text:sub(i)
+			-- No more color sequences, but check for other escape sequences to strip
+			local next_esc = text:find("\27", i)
+			local chunk
+			if next_esc then
+				chunk = text:sub(i, next_esc - 1)
+				-- Skip the escape sequence
+				local skip_end = text:find("[A-Za-z]", next_esc + 1)
+				if skip_end then
+					i = skip_end + 1
+				else
+					i = next_esc + 2
+				end
+			else
+				chunk = text:sub(i)
+				i = #text + 1
+			end
+			
 			if current_hl and #chunk > 0 then
 				table.insert(highlights, { pos, pos + #chunk, current_hl })
 			end
 			clean_text = clean_text .. chunk
-			break
+			pos = pos + #chunk
+			
+			if not next_esc then
+				break
+			end
 		end
 	end
 	
@@ -333,7 +410,10 @@ local function start_tinker()
 	-- Get current working directory
 	local cwd = vim.fn.getcwd()
 
-	state.tinker_job_id = vim.fn.jobstart({ "php", "artisan", "tinker" }, {
+	-- Get appropriate command based on mode
+	local command = get_tinker_command()
+	
+	state.tinker_job_id = vim.fn.jobstart(command, {
 		on_stdout = process_output,
 		on_stderr = process_output,
 		on_exit = function(_, exit_code)
