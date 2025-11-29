@@ -73,6 +73,7 @@ return { -- Fuzzy Finder (files, lsp, etc)
                 buffers = picker_prefs,
             },
             extensions = {
+                fzf ={},
                 ['ui-select'] = {
                     require('telescope.themes').get_dropdown(),
                 },
@@ -91,7 +92,7 @@ return { -- Fuzzy Finder (files, lsp, etc)
         vim.keymap.set('n', '<leader>f', builtin.git_files, { desc = 'Search Git [F]iles' })
         vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
         vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
-        vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
+        -- vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
         vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
         vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
         vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
@@ -99,6 +100,11 @@ return { -- Fuzzy Finder (files, lsp, etc)
         vim.keymap.set('n', '<leader>g', function()
             require('telescope.builtin').grep_string({ search = vim.fn.input("Grep > ") })
         end, {})
+
+        require 'plugins.multigrep'.setup()
+        -- vim.keymap.set('n', '<leader>sg', function()
+        --     require('telescope.builtin').grep_string({ search = vim.fn.input("Grep > ") })
+        -- end, {})
 
         -- Slightly advanced example of overriding default behavior and theme
         vim.keymap.set('n', '<leader>/', function()
