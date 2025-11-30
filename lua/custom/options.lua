@@ -20,9 +20,8 @@ local options = {
     breakindent = true,
     timeout = true,
     timeoutlen = 300,    -- time to wait for a mapped sequence to complete (in milliseconds)
-    updatetime = 0,      -- faster completion (4000ms default)
+    updatetime = 250,    -- faster completion (4000ms default) - used for CursorHold events
     writebackup = false, -- if a file is being edited by another program (or was written to file while editing with another program), it is not allowed to be edited
-    autoread = true,     -- automatically reload files changed outside of vim
     expandtab = true,    -- convert tabs to spaces
     cursorline = false,   -- highlight the current line
     number = true,       -- set numbered lines
@@ -55,12 +54,3 @@ for k, val in pairs(options) do
 end
 vim.filetype.add({ extension = { templ = "templ" } })
 
--- Trigger autoread when changing buffers or coming back to vim
-vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold", "CursorHoldI" }, {
-    pattern = "*",
-    callback = function()
-        if vim.fn.mode() ~= 'c' then
-            vim.cmd('checktime')
-        end
-    end,
-})
