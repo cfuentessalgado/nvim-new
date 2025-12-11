@@ -41,7 +41,6 @@ require('lazy').setup({
   require 'plugins.colorscheme',
   require 'plugins.oil',
   -- require 'plugins.php',
-  require 'plugins.tinker',
   require 'plugins.sidekick',  -- Disabled for now
   {
     'sindrets/diffview.nvim',
