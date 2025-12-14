@@ -44,13 +44,13 @@ return { -- Fuzzy Finder (files, lsp, etc)
 
         local picker_prefs = {
             show_untracked = true,
-            previewer = false,
+            previewer = true,
             winblend = 10,
             border = true,
-            theme = 'dropdown',
+            -- theme = 'dropdown',
             layout_config = {
-                width = 0.4,
-                height = 0.4,
+                width = 0.8,
+                height = 0.6,
             }
         }
 
