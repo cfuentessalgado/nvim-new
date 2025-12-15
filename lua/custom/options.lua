@@ -2,9 +2,15 @@ vim.wo.number = true
 
 vim.o.completeopt = "menuone,noselect"
 
+-- Sync clipboard between OS and Neovim.
+--  Schedule the setting after `UiEnter` because it can increase startup-time.
+--  See `:help 'clipboard'`
+vim.schedule(function()
+	vim.o.clipboard = "unnamedplus"
+end)
+
 local options = {
 	backup = false, -- creates a backup file
-	clipboard = "unnamedplus", -- allows neovim to access the system clipboard
 	completeopt = { "menuone", "noselect" }, -- mostly just for cmp
 	-- conceallevel = 0, -- so that `` is visible in markdown files
 	fileencoding = "utf-8", -- the encoding written to a file
@@ -45,8 +51,18 @@ local options = {
 	cmdheight = 1,
 	winbar = "%= %m%f",
 	background = "dark",
+	-- Preview substitutions live, as you type!
+	inccommand = "nosplit",
+	-- Display certain whitespace characters in the editor
+	list = true,
+	-- If performing an operation that would fail due to unsaved changes,
+	-- raise a dialog asking if you wish to save the current file(s)
+	confirm = true,
 	-- colorcolumn = "80",
 }
+
+-- Sets how neovim will display certain whitespace characters in the editor.
+vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
 
 vim.opt.isfname:append("@-@")
 for k, val in pairs(options) do

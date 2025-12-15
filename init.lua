@@ -3,7 +3,7 @@ vim.g.maplocalleader = ' '
 vim.g.have_nerd_font = true
 
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
-if not vim.loop.fs_stat(lazypath) then
+if not (vim.uv or vim.loop).fs_stat(lazypath) then
   vim.fn.system {
     'git',
     'clone',
@@ -37,6 +37,7 @@ require('lazy').setup({
   require 'plugins.copilot',
   require 'plugins.noice',
   require 'plugins.blink',
+  require 'plugins.conform',
   -- require 'plugins.trouble',
   require 'plugins.undotree',
   require 'plugins.colorscheme',
