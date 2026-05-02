@@ -205,7 +205,7 @@ return {
         },
         bashls = {},
         html = {},
-        copilot = {},
+        -- copilot = {},
 
         emmet_language_server = {
           filetypes = {

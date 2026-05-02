@@ -33,8 +33,6 @@ require('lazy').setup({
   require 'plugins.whichkey',
   require 'plugins.telescope',
   require 'plugins.lsp',
-  -- require 'plugins.autocomplete',
-  require 'plugins.copilot',
   require 'plugins.noice',
   require 'plugins.blink',
   require 'plugins.conform',

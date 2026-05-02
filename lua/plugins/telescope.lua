@@ -1,6 +1,5 @@
 return { -- Fuzzy Finder (files, lsp, etc)
     'nvim-telescope/telescope.nvim',
-    tag = 'v0.2.0',
     dependencies = {
         'nvim-lua/plenary.nvim',
         { -- If encountering errors, see telescope-fzf-native README for install instructions
@@ -59,12 +58,12 @@ return { -- Fuzzy Finder (files, lsp, etc)
         require('telescope').setup {
             -- You can put your default mappings / updates / etc. in here
             --  All the info you're looking for is in `:help telescope.setup()`
-            --
-            -- defaults = {
-            --   mappings = {
-            --     i = { ['<c-enter>'] = 'to_fuzzy_refine' },
-            --   },
-            -- },
+            defaults = {
+                -- Disable treesitter highlighting in preview to avoid nvim 0.12 compatibility errors
+                preview = {
+                    treesitter = false,
+                },
+            },
             pickers = {
                 git_files = picker_prefs,
                 find_files = picker_prefs,

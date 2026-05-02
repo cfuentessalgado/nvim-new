@@ -3,7 +3,7 @@ return {
     event = 'VimEnter',
 	version = "1.*",
 	dependencies = {
-		"giuxtaposition/blink-cmp-copilot",
+		-- "giuxtaposition/blink-cmp-copilot",
 		-- Snippet engine for blink.cmp
 		{
 			"L3MON4D3/LuaSnip",
@@ -55,12 +55,12 @@ return {
 			},
 		},
 		sources = {
-			default = { "lazydev", "lsp", "path", "snippets", "buffer", "copilot" },
+			default = { "lazydev", "lsp", "path", "snippets", "buffer"},
 			providers = {
-				copilot = {
-					name = "copilot",
-					module = "blink-cmp-copilot",
-				},
+				-- copilot = {
+				-- 	name = "copilot",
+				-- 	module = "blink-cmp-copilot",
+				-- },
 				lazydev = {
 					name = "LazyDev",
 					module = "lazydev.integrations.blink",
