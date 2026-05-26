@@ -29,3 +29,7 @@ if vim.env.NVIM_NEOGIT == '1' then
     end,
   })
 end
+
+-- vim.keymap.set('n', '<leader>lh', function()
+--     vim.lsp.inlay_hint.enable()
+-- end, { desc = 'Toggle LSP Inlay Hints' })
