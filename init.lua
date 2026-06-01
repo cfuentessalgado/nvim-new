@@ -6,6 +6,7 @@ vim.g.have_nerd_font = true
 
 require 'custom.options'
 require 'custom.keymaps'
+require 'custom.scratch'
 require 'custom.pack'
 
 require 'plugins.guess_indent'
