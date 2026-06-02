@@ -24,6 +24,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
     map('grn', vim.lsp.buf.rename, '[R]e[n]ame')
     map('gra', vim.lsp.buf.code_action, '[G]oto Code [A]ction', { 'n', 'x' })
     map('grD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
+    map('gd', vim.lsp.buf.definition, '[G]oto [D]efinition')
 
     local client = vim.lsp.get_client_by_id(event.data.client_id)
     if client and client:supports_method('textDocument/documentHighlight', event.buf) then
@@ -56,7 +57,24 @@ local servers = {
   gopls = {},
   rust_analyzer = {},
   ts_ls = { filetypes = { 'javascript', 'javascriptreact', 'typescript', 'typescriptreact' } },
-  intelephense = { files = { '*.php', '*.ctp' } },
+  phpantom_lsp = {
+    cmd = { 'phpantom_lsp'},
+    filetypes = { 'php'},
+    root_markers = { 'composer.json', '.git' },
+  },
+  -- intelephense = {
+  --   filetypes = { 'php' },
+  --   settings = {
+  --     intelephense = {
+  --       inlayHints = {
+  --         parameterNames = { enabled = 'all' },
+  --         variableTypes = { enabled = true },
+  --         propertyDeclarationTypes = { enabled = true },
+  --         functionLikeReturnTypes = { enabled = true },
+  --       },
+  --     },
+  --   },
+  -- },
   bashls = {},
   html = {},
   stylua = {},
