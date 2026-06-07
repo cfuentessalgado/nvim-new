@@ -57,24 +57,24 @@ local servers = {
   gopls = {},
   rust_analyzer = {},
   ts_ls = { filetypes = { 'javascript', 'javascriptreact', 'typescript', 'typescriptreact' } },
-  phpantom_lsp = {
-    cmd = { 'phpantom_lsp'},
-    filetypes = { 'php'},
-    root_markers = { 'composer.json', '.git' },
-  },
-  -- intelephense = {
-  --   filetypes = { 'php' },
-  --   settings = {
-  --     intelephense = {
-  --       inlayHints = {
-  --         parameterNames = { enabled = 'all' },
-  --         variableTypes = { enabled = true },
-  --         propertyDeclarationTypes = { enabled = true },
-  --         functionLikeReturnTypes = { enabled = true },
-  --       },
-  --     },
-  --   },
+  -- phpantom_lsp = {
+  --   cmd = { 'phpantom_lsp'},
+  --   filetypes = { 'php'},
+  --   root_markers = { 'composer.json', '.git' },
   -- },
+  intelephense = {
+    filetypes = { 'php' },
+    settings = {
+      intelephense = {
+        inlayHints = {
+          parameterNames = { enabled = 'all' },
+          variableTypes = { enabled = true },
+          propertyDeclarationTypes = { enabled = true },
+          functionLikeReturnTypes = { enabled = true },
+        },
+      },
+    },
+  },
   bashls = {},
   html = {},
   stylua = {},
